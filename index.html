@@ -1,0 +1,688 @@
+<!-- templates/index.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Self-RAG vs Corrective RAG Comparison</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            font-weight: 700;
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .main-content {
+            padding: 30px;
+        }
+
+        .upload-section {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 30px;
+            border: 2px dashed #dee2e6;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .upload-section:hover {
+            border-color: #4facfe;
+            background: #f0f8ff;
+        }
+
+        .upload-section.dragover {
+            border-color: #4facfe;
+            background: #e6f3ff;
+            transform: scale(1.02);
+        }
+
+        .upload-btn {
+            background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 50px;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin: 10px;
+        }
+
+        .upload-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(255, 107, 107, 0.3);
+        }
+
+        .upload-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .clear-btn {
+            background: linear-gradient(135deg, #ffa726, #fb8c00);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 25px;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-left: 10px;
+        }
+
+        .clear-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 5px 15px rgba(255, 167, 38, 0.3);
+        }
+
+        .query-section {
+            margin-bottom: 30px;
+        }
+
+        .query-input {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #e9ecef;
+            border-radius: 10px;
+            font-size: 1.1rem;
+            margin-bottom: 15px;
+            transition: border-color 0.3s ease;
+        }
+
+        .query-input:focus {
+            outline: none;
+            border-color: #4facfe;
+            box-shadow: 0 0 0 3px rgba(79, 172, 254, 0.1);
+        }
+
+        .process-btn {
+            background: linear-gradient(135deg, #56ab2f, #a8e6cf);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 50px;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            width: 100%;
+        }
+
+        .process-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(86, 171, 47, 0.3);
+        }
+
+        .process-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .results-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-top: 30px;
+        }
+
+        .rag-panel {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            border: 1px solid #e9ecef;
+        }
+
+        .panel-header {
+            padding: 20px;
+            font-weight: 600;
+            font-size: 1.3rem;
+            color: white;
+            text-align: center;
+        }
+
+        .self-rag .panel-header {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+        }
+
+        .corrective-rag .panel-header {
+            background: linear-gradient(135deg, #f093fb, #f5576c);
+        }
+
+        .panel-content {
+            padding: 25px;
+            max-height: 600px;
+            overflow-y: auto;
+        }
+
+        .step {
+            background: #f8f9fa;
+            border-left: 4px solid #4facfe;
+            padding: 15px;
+            margin-bottom: 15px;
+            border-radius: 5px;
+            animation: slideIn 0.5s ease;
+        }
+
+        .step-title {
+            font-weight: 600;
+            color: #495057;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+        }
+
+        .step-content {
+            color: #6c757d;
+            line-height: 1.6;
+        }
+
+        .final-answer {
+            background: linear-gradient(135deg, #a8edea, #fed6e3);
+            border: none;
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+
+        .final-answer .step-title {
+            color: #2c3e50;
+            font-size: 1.1rem;
+        }
+
+        .final-answer .step-content {
+            color: #34495e;
+            font-weight: 500;
+        }
+
+        .status {
+            text-align: center;
+            padding: 20px;
+            font-size: 1.1rem;
+            color: #6c757d;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #4facfe;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 10px;
+        }
+
+        .document-count {
+            background: #e9ecef;
+            padding: 10px 20px;
+            border-radius: 20px;
+            margin: 10px 0;
+            font-weight: 500;
+            display: inline-block;
+        }
+
+        .alert {
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 10px;
+            font-weight: 500;
+        }
+
+        .alert-success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+
+        .alert-error {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+
+        .alert-info {
+            background: #d1ecf1;
+            border: 1px solid #bee5eb;
+            color: #0c5460;
+        }
+
+        .file-list {
+            margin-top: 15px;
+            text-align: left;
+        }
+
+        .file-item {
+            background: #e9ecef;
+            padding: 8px 12px;
+            margin: 5px 0;
+            border-radius: 5px;
+            font-size: 0.9rem;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        .icon {
+            margin-right: 8px;
+            font-size: 1.1em;
+        }
+
+        @media (max-width: 768px) {
+            .results-section {
+                grid-template-columns: 1fr;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .main-content {
+                padding: 20px;
+            }
+        }
+
+        .api-keys-info {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            color: #856404;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+
+        .api-keys-info strong {
+            display: block;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🤖 Self-RAG vs Corrective RAG</h1>
+            <p>Compare agentic RAG workflows side-by-side with your PDF documents</p>
+        </div>
+
+        <div class="main-content">
+            <div class="api-keys-info">
+                <strong>⚠️ Performance Optimizations:</strong>
+                For faster processing, this app limits PDFs to:
+                <br>• Maximum 10 PDF files per upload
+                <br>• Maximum 10MB per PDF file
+                <br>• First 20 pages per PDF (for large documents)
+                <br>• Maximum 1000 text chunks total
+                <br><br>
+                Make sure you have created a <code>.env</code> file with:
+                <br>• <code>OPENAI_API_KEY=your-openai-key-here</code>
+                <br>• <code>TAVILY_API_KEY=your-tavily-key-here</code>
+            </div>
+
+            <div id="alertContainer"></div>
+
+            <div class="upload-section" id="uploadSection">
+                <h3>📁 Upload PDF Documents</h3>
+                <p>Select multiple PDF files to create your knowledge base</p>
+                <input type="file" id="fileInput" multiple accept=".pdf" style="display: none;">
+                <button class="upload-btn" id="uploadBtn" onclick="document.getElementById('fileInput').click()">
+                    Choose PDF Files
+                </button>
+                <button class="clear-btn" id="clearBtn" onclick="clearSession()" style="display: none;">
+                    🗑️ Clear All
+                </button>
+                <div class="document-count" id="docCount" style="display: none;">
+                    📄 <span id="docCountNumber">0</span> files uploaded
+                </div>
+                <div class="file-list" id="fileList"></div>
+            </div>
+
+            <div class="query-section">
+                <input type="text" 
+                       class="query-input" 
+                       id="queryInput" 
+                       placeholder="Enter your question about the PDF documents..."
+                       disabled>
+                <button class="process-btn" id="processBtn" onclick="processQuery()" disabled>
+                    🚀 Process with Both RAG Systems
+                </button>
+            </div>
+
+            <div class="results-section">
+                <div class="rag-panel self-rag">
+                    <div class="panel-header">
+                        🔄 Self-RAG Workflow
+                    </div>
+                    <div class="panel-content" id="selfRagResults">
+                        <div class="status">Upload PDF documents and enter a query to see Self-RAG in action</div>
+                    </div>
+                </div>
+
+                <div class="rag-panel corrective-rag">
+                    <div class="panel-header">
+                        🔧 Corrective RAG Workflow
+                    </div>
+                    <div class="panel-content" id="correctiveRagResults">
+                        <div class="status">Upload PDF documents and enter a query to see Corrective RAG in action</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let sessionId = null;
+        let isProcessing = false;
+
+        // DOM elements
+        const fileInput = document.getElementById('fileInput');
+        const uploadBtn = document.getElementById('uploadBtn');
+        const clearBtn = document.getElementById('clearBtn');
+        const uploadSection = document.getElementById('uploadSection');
+        const queryInput = document.getElementById('queryInput');
+        const processBtn = document.getElementById('processBtn');
+        const docCount = document.getElementById('docCount');
+        const docCountNumber = document.getElementById('docCountNumber');
+        const fileList = document.getElementById('fileList');
+        const alertContainer = document.getElementById('alertContainer');
+
+        // Event listeners
+        fileInput.addEventListener('change', handleFileUpload);
+        
+        // Drag and drop functionality
+        uploadSection.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadSection.classList.add('dragover');
+        });
+
+        uploadSection.addEventListener('dragleave', () => {
+            uploadSection.classList.remove('dragover');
+        });
+
+        uploadSection.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadSection.classList.remove('dragover');
+            const files = Array.from(e.dataTransfer.files).filter(file => file.type === 'application/pdf');
+            if (files.length > 0) {
+                fileInput.files = createFileList(files);
+                handleFileUpload();
+            }
+        });
+
+        // Enter key to submit query
+        queryInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && !processBtn.disabled && !isProcessing) {
+                processQuery();
+            }
+        });
+
+        // Helper function to create FileList from array
+        function createFileList(files) {
+            const dt = new DataTransfer();
+            files.forEach(file => dt.items.add(file));
+            return dt.files;
+        }
+
+        // Show alert messages
+        function showAlert(message, type = 'info') {
+            const alert = document.createElement('div');
+            alert.className = `alert alert-${type}`;
+            alert.textContent = message;
+            alertContainer.appendChild(alert);
+            
+            setTimeout(() => {
+                alert.remove();
+            }, 5000);
+        }
+
+        // Handle file upload
+        async function handleFileUpload() {
+            const files = Array.from(fileInput.files);
+            const pdfFiles = files.filter(file => file.type === 'application/pdf');
+            
+            if (pdfFiles.length === 0) {
+                showAlert('Please select PDF files only.', 'error');
+                return;
+            }
+
+            // Show loading state
+            uploadBtn.disabled = true;
+            uploadBtn.innerHTML = '<div class="loading"></div>Uploading...';
+            docCount.style.display = 'block';
+            docCount.innerHTML = '<div class="loading"></div>Processing PDFs...';
+
+            try {
+                const formData = new FormData();
+                pdfFiles.forEach(file => {
+                    formData.append('files', file);
+                });
+
+                const response = await fetch('/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    sessionId = result.session_id;
+                    
+                    // Update UI
+                    docCountNumber.textContent = result.files.length;
+                    docCount.innerHTML = `📄 ${result.files.length} PDF files uploaded successfully`;
+                    
+                    // Show file list
+                    fileList.innerHTML = result.files.map(file => 
+                        `<div class="file-item">📄 ${file}</div>`
+                    ).join('');
+                    
+                    // Enable query input
+                    queryInput.disabled = false;
+                    processBtn.disabled = false;
+                    clearBtn.style.display = 'inline-block';
+                    queryInput.focus();
+                    
+                    showAlert('PDFs uploaded and processed successfully!', 'success');
+                } else {
+                    showAlert(result.error || 'Error uploading files', 'error');
+                }
+            } catch (error) {
+                showAlert('Error uploading files: ' + error.message, 'error');
+            } finally {
+                uploadBtn.disabled = false;
+                uploadBtn.textContent = 'Choose PDF Files';
+            }
+        }
+
+        // Process query with both RAG systems
+        async function processQuery() {
+            const question = queryInput.value.trim();
+            
+            if (!question) {
+                showAlert('Please enter a question.', 'error');
+                return;
+            }
+
+            if (!sessionId) {
+                showAlert('Please upload PDF documents first.', 'error');
+                return;
+            }
+
+            // Set processing state
+            isProcessing = true;
+            processBtn.disabled = true;
+            processBtn.innerHTML = '<div class="loading"></div>Processing...';
+            
+            // Clear previous results
+            document.getElementById('selfRagResults').innerHTML = '<div class="loading"></div>Processing with Self-RAG...';
+            document.getElementById('correctiveRagResults').innerHTML = '<div class="loading"></div>Processing with Corrective RAG...';
+
+            try {
+                const response = await fetch('/query', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ question: question })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    // Display Self-RAG results
+                    displaySelfRAGResults(result.self_rag);
+                    
+                    // Display Corrective RAG results
+                    displayCorrectiveRAGResults(result.corrective_rag);
+                    
+                    showAlert('Query processed successfully!', 'success');
+                } else {
+                    // Handle error case but still show any partial results
+                    if (result.self_rag) {
+                        displaySelfRAGResults(result.self_rag);
+                    } else {
+                        document.getElementById('selfRagResults').innerHTML = '<div class="status">Error occurred during processing</div>';
+                    }
+                    
+                    if (result.corrective_rag) {
+                        displayCorrectiveRAGResults(result.corrective_rag);
+                    } else {
+                        document.getElementById('correctiveRagResults').innerHTML = '<div class="status">Error occurred during processing</div>';
+                    }
+                    
+                    showAlert(result.error || 'Error processing query', 'error');
+                }
+            } catch (error) {
+                showAlert('Error processing query: ' + error.message, 'error');
+                document.getElementById('selfRagResults').innerHTML = '<div class="status">Error occurred during processing</div>';
+                document.getElementById('correctiveRagResults').innerHTML = '<div class="status">Error occurred during processing</div>';
+            } finally {
+                isProcessing = false;
+                processBtn.disabled = false;
+                processBtn.textContent = '🚀 Process with Both RAG Systems';
+            }
+        }
+
+        // Display Self-RAG results
+        function displaySelfRAGResults(result) {
+            const container = document.getElementById('selfRagResults');
+            let html = '';
+            
+            result.steps.forEach(step => {
+                const isFinal = step.title.includes('Final Answer');
+                html += `
+                    <div class="step ${isFinal ? 'final-answer' : ''}">
+                        <div class="step-title">
+                            <span class="icon">${isFinal ? '🎯' : '⚡'}</span>
+                            ${step.title}
+                        </div>
+                        <div class="step-content">${step.content}</div>
+                    </div>
+                `;
+            });
+            
+            container.innerHTML = html;
+            container.scrollTop = container.scrollHeight;
+        }
+
+        // Display Corrective RAG results
+        function displayCorrectiveRAGResults(result) {
+            const container = document.getElementById('correctiveRagResults');
+            let html = '';
+            
+            result.steps.forEach(step => {
+                const isFinal = step.title.includes('Final Answer');
+                html += `
+                    <div class="step ${isFinal ? 'final-answer' : ''}">
+                        <div class="step-title">
+                            <span class="icon">${isFinal ? '🎯' : '⚡'}</span>
+                            ${step.title}
+                        </div>
+                        <div class="step-content">${step.content}</div>
+                    </div>
+                `;
+            });
+            
+            container.innerHTML = html;
+            container.scrollTop = container.scrollHeight;
+        }
+
+        // Clear session
+        async function clearSession() {
+            if (confirm('Are you sure you want to clear all uploaded files and start over?')) {
+                try {
+                    await fetch('/clear', { method: 'POST' });
+                    
+                    // Reset UI
+                    sessionId = null;
+                    fileInput.value = '';
+                    queryInput.value = '';
+                    queryInput.disabled = true;
+                    processBtn.disabled = true;
+                    clearBtn.style.display = 'none';
+                    docCount.style.display = 'none';
+                    fileList.innerHTML = '';
+                    
+                    document.getElementById('selfRagResults').innerHTML = '<div class="status">Upload PDF documents and enter a query to see Self-RAG in action</div>';
+                    document.getElementById('correctiveRagResults').innerHTML = '<div class="status">Upload PDF documents and enter a query to see Corrective RAG in action</div>';
+                    
+                    showAlert('Session cleared successfully!', 'success');
+                } catch (error) {
+                    showAlert('Error clearing session: ' + error.message, 'error');
+                }
+            }
+        }
+    </script>
+</body>
+</html>
